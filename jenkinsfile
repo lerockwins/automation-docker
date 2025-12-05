@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_USER = "your-dockerhub-username"
+        IMAGE_NAME = "your-image-name"
+        IMAGE_TAG = "v1"
+    }
+
+    stages {
+        
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/your-repo-url.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh 'docker build -t $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG .'
+                }
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    sh 'echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin'
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                script {
+                    sh 'docker push $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG'
+                }
+            }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                script {
+                    // Remove older running container
+                    sh 'docker rm -f myapp || true'
+
+                    // Run new container
+                    sh 'docker run -d --name myapp -p 3000:3000 $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG'
+                }
+            }
+        }
+    }
+}
